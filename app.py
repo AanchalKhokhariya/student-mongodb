@@ -2,10 +2,13 @@ from flask import Flask, request, jsonify
 from pymongo import MongoClient
 from bson import ObjectId
 from flask import render_template
-
+from dotenv import load_dotenv
+import os
+load_dotenv() 
 app = Flask(__name__)
 
-client = MongoClient("mongodb+srv://adminUser:UatzgP5X2HFnXVtG@cluster0.vls44qm.mongodb.net/?appName=Cluster0")
+mongo_uri = os.getenv("MONGO_URI")
+client = MongoClient(mongo_uri)
 db = client["student"]
 collection = db["demo"]
 

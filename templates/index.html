@@ -1,154 +1,226 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="en">
 <head>
-    <title>Student Management</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Management Pro</title>
     <style>
-        body {
-            font-family: Arial;
-            background-color: #f4f6f9;
-            padding: 20px;
+        :root {
+            --primary: #4a90e2;
+            --secondary: #6c757d;
+            --success: #28a745;
+            --danger: #dc3545;
+            --bg: #f8f9fa;
         }
 
-        h1 {
-            text-align: center;
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            padding: 40px 20px;
+            color: #333;
         }
 
         .container {
-            width: 500px;
+            max-width: 600px;
             margin: auto;
             background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
         }
+
+        h1 { text-align: center; color: #2c3e50; margin-bottom: 30px; }
+        h3 { border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 0; }
+
+        .form-group { margin-bottom: 15px; }
+        
+        label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.9rem; }
 
         input {
             width: 100%;
-            padding: 8px;
-            margin: 5px 0;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            box-sizing: border-box;
+            transition: border-color 0.3s;
         }
+
+        input:focus { border-color: var(--primary); outline: none; }
+
+        .btn-group { display: flex; gap: 10px; margin-top: 20px; }
 
         button {
-            padding: 8px 12px;
-            margin-top: 5px;
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
             cursor: pointer;
+            font-weight: 600;
+            transition: opacity 0.2s;
         }
 
-        .student {
-            background: #eef;
-            padding: 10px;
-            margin-top: 10px;
-            border-radius: 5px;
+        button:hover { opacity: 0.9; }
+
+        #submit-btn { background-color: var(--primary); color: white; }
+        #fetch-btn { background-color: var(--secondary); color: white; }
+        #cancel-btn { background-color: #eee; color: #333; display: none; }
+
+        .student-list { margin-top: 30px; }
+
+        .student-card {
+            background: #fff;
+            border: 1px solid #edf2f7;
+            padding: 15px;
+            margin-top: 15px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
         }
+
+        .student-info b { font-size: 1.1rem; color: var(--primary); }
 
         .actions button {
-            margin-right: 5px;
+            padding: 6px 12px;
+            font-size: 0.8rem;
+            margin-left: 5px;
         }
+
+        .del-btn { background: #ffebee; color: var(--danger); }
+        .edit-btn { background: #e3f2fd; color: var(--primary); }
     </style>
 </head>
-
 <body>
 
-    <h1>Student Management App</h1>
+    <h1>Student Management</h1>
 
     <div class="container">
-        <h3>Add Student</h3>
-        <input type="text" id="name" placeholder="Name">
-        <input type="number" id="age" placeholder="Age">
-        <input type="text" id="hobbies" placeholder="Hobbies (comma separated)">
-        <button onclick="addStudent()">Add Student</button>
+        <h3 id="form-title">Add New Student</h3>
+        
+        <input type="hidden" id="student-id">
 
-        <hr>
+        <div class="form-group">
+            <label>Full Name</label>
+            <input type="text" id="name">
+        </div>
 
-        <h3>All Students</h3>
-        <div id="students"></div>
+        <div class="form-group">
+            <label>Age</label>
+            <input type="number" id="age">
+        </div>
+
+        <div class="form-group">
+            <label>Hobbies</label>
+            <input type="text" id="hobbies">
+        </div>
+
+        <div class="btn-group">
+            <button id="submit-btn" onclick="handleSubmit()">Add Student</button>
+            <button id="cancel-btn" onclick="resetForm()">Cancel</button>
+            <button id="fetch-btn" onclick="fetchStudents()">See All Students</button>
+        </div>
+
+        <div class="student-list" id="students">
+            </div>
     </div>
 
     <script>
-
-        const API_URL = "http://127.0.0.1:5000";
+        let isEditing = false;
 
         async function fetchStudents() {
             try {
                 const response = await fetch("/get");
-
-                if (!response.ok) {
-                    throw new Error("HTTP error " + response.status);
-                }
-  
+                if (!response.ok) throw new Error("Fetch failed");
+                
                 const students = await response.json();
-                console.log("Students:", students);
-
                 const container = document.getElementById("students");
-                container.innerHTML = "";
+                container.innerHTML = "<h3>Student Records</h3>";
 
-                students.forEach(student => {
+                if(students.length === 0) container.innerHTML += "<p>No students found.</p>";
 
-                    let hobbiesText = "";
-
-                    if (Array.isArray(student.hobbies)) {
-                        hobbiesText = student.hobbies.join(", ");
-                    } else if (typeof student.hobbies === "string") {
-                        hobbiesText = student.hobbies;
-                    }
-
+                students.forEach(s => {
+                    const hobbiesArr = Array.isArray(s.hobbies) ? s.hobbies : [s.hobbies];
                     container.innerHTML += `
-                        <div class="student">
-                            <b>${student.name}</b> (Age: ${student.age})<br>
-                            Hobbies: ${hobbiesText}<br>
+                        <div class="student-card">
+                            <div class="student-info">
+                                <b>${s.name}</b> (${s.age} years)<br>
+                                <small style="color: #666">${hobbiesArr.join(", ")}</small>
+                            </div>
                             <div class="actions">
-                                <button onclick="deleteStudent('${student.id}')">Delete</button>
-                                <button onclick="editStudent('${student.id}', '${student.name}', ${student.age})">Edit</button>
+                                <button class="edit-btn" onclick="prepareEdit('${s.id}', '${s.name}', ${s.age}, '${hobbiesArr.join(",")}')">Edit</button>
+                                <button class="del-btn" onclick="deleteStudent('${s.id}')">Delete</button>
                             </div>
                         </div>
                     `;
                 });
-
             } catch (error) {
-                console.error("Error fetching students:", error);
+                console.error("Error:", error);
             }
         }
 
-        async function addStudent() {
+        async function handleSubmit() {
+            const id = document.getElementById("student-id").value;
             const name = document.getElementById("name").value;
             const age = document.getElementById("age").value;
-            const hobbies = document.getElementById("hobbies").value.split(",");
+            const hobbies = document.getElementById("hobbies").value.split(",").map(h => h.trim());
 
-            await fetch("/add", {
-                method: "POST",
+            if(!name || !age) return alert("Please fill Name and Age");
+
+            const payload = { name, age: Number(age), hobbies };
+            
+            let url = "/add";
+            let method = "POST";
+
+            if (isEditing) {
+                url = "/update/" + id;
+                method = "PUT";
+            }
+
+            await fetch(url, {
+                method: method,
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name, age: Number(age), hobbies })
+                body: JSON.stringify(payload)
             });
 
+            resetForm();
             fetchStudents();
+        }
+
+        function prepareEdit(id, name, age, hobbies) {
+            isEditing = true;
+            document.getElementById("form-title").innerText = "Edit Student";
+            document.getElementById("submit-btn").innerText = "Update Details";
+            document.getElementById("submit-btn").style.backgroundColor = "var(--success)";
+            document.getElementById("cancel-btn").style.display = "block";
+            
+            document.getElementById("student-id").value = id;
+            document.getElementById("name").value = name;
+            document.getElementById("age").value = age;
+            document.getElementById("hobbies").value = hobbies;
+            
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function resetForm() {
+            isEditing = false;
+            document.getElementById("form-title").innerText = "Add New Student";
+            document.getElementById("submit-btn").innerText = "Add Student";
+            document.getElementById("submit-btn").style.backgroundColor = "var(--primary)";
+            document.getElementById("cancel-btn").style.display = "none";
+            
+            document.getElementById("student-id").value = "";
+            document.getElementById("name").value = "";
+            document.getElementById("age").value = "";
+            document.getElementById("hobbies").value = "";
         }
 
         async function deleteStudent(id) {
-            await fetch("/delete/" + id, {
-                method: "DELETE"
-            });
-
-            fetchStudents();
+            if(confirm("Delete this record?")) {
+                await fetch("/delete/" + id, { method: "DELETE" });
+                fetchStudents();
+            }
         }
-
-        async function editStudent(id, oldName, oldAge) {
-            const name = prompt("Enter new name", oldName);
-            const age = prompt("Enter new age", oldAge);
-
-            await fetch("/update/" + id, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name, age: Number(age) })
-            });
-
-            fetchStudents();
-        }
-
-        fetchStudents();
-
     </script>
-
 </body>
-
 </html>
